@@ -20,12 +20,12 @@ public class Publisher implements Runnable {
 
     private TableService service;
 
-    public Publisher(TableService service,int hostPort,String neighbourIp,ArrayList<Integer> portList) throws SocketException {
+    public Publisher(TableService service,int hostPort,int portIncrement, String neighbourIp,ArrayList<Integer> portList) {
         this.service = service;
         this.routingTable = service.getTable();
         this.neighbourIp = neighbourIp;
         this.portList = portList;
-        this.hostPort = hostPort;
+        this.hostPort = hostPort + portIncrement;
     }
 
     @Override
@@ -35,10 +35,9 @@ public class Publisher implements Runnable {
 
     public void sendPackets() {
         try {
-            int sendingPort = hostPort + 100;
-            DatagramSocket socket = new DatagramSocket(sendingPort);
+            DatagramSocket socket = new DatagramSocket(hostPort);
 
-            Logger.log(String.format("Opening socket for sending with port: %d", sendingPort));
+            Logger.log(String.format("Opening socket for sending with port: %d", hostPort));
 
             while (true) {
                 Thread.sleep(3000);

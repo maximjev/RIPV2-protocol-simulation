@@ -1,16 +1,15 @@
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 public class TableService {
     private RoutingTable table;
     private String myIp;
-    private ArrayList<String> myInterfaces;
+    private int decrement;
 
-    public TableService(RoutingTable table,String myIp, ArrayList<String> myInterfaces) {
+    public TableService(RoutingTable table, String myIp, int portDecrement) {
         this.table = table;
         this.myIp = myIp;
-        this.myInterfaces = myInterfaces;
+        this.decrement = portDecrement;
         printTable();
     }
 
@@ -19,8 +18,9 @@ public class TableService {
         ArrayList<TableRow> neighbourRows = neighbourTable.get_rows();
         HashMap<String,TableRow> myRowsMap = table.getRowsMap();
         TableRow newRow;
+        neighbourPort = neighbourPort - decrement;
 
-        String nextHop = neighbourIp + ":" + Integer.toString(neighbourPort);
+        String neighbour = neighbourIp + ":" + Integer.toString(neighbourPort);
 
         String neighbourAddress;
         int neighbourCost;
@@ -33,7 +33,7 @@ public class TableService {
             if(!myRowsMap.containsKey(neighbourAddress)) {
                 newRow = new TableRow(
                         neighbourAddress,
-                        nextHop,
+                        neighbour,
                         neighbourCost +1);
                 table.addRow(newRow);
                 changes = true;
@@ -44,9 +44,8 @@ public class TableService {
                     myRowsMap.get(neighbourAddress).getCost() != 0) {
                 if(neighbourCost != 16 &&
                         neighbourCost + 1 != myRowsMap.get(neighbourAddress).getCost() &&
-                        neighbourCost < myRowsMap.get(neighbourAddress).getCost() &&
-                        !myInterfaces.contains(neighbourRow.getNextHop())) {
-                    table.updateCost(neighbourAddress, nextHop, neighbourCost + 1);
+                        neighbourCost < myRowsMap.get(neighbourAddress).getCost()) {
+                    table.updateCost(neighbourAddress, neighbour, neighbourCost + 1);
                     changes = true;
                     Logger.log("update cost changes");
                     Logger.log("Network: " + neighbourAddress + " cost: " + neighbourCost);
@@ -55,9 +54,8 @@ public class TableService {
                 if(myRowsMap.get(neighbourAddress).getCost() != 16 &&
                         myRowsMap.get(neighbourAddress).getCost() != 1 &&
                         neighbourCost == 16 &&
-                        !neighbourRow.getNextHop().equals(myIp) &&
-                        myInterfaces.contains(neighbourRow.getNextHop())) {
-                    table.updateCost(neighbourAddress, nextHop, 16);
+                        myRowsMap.get(neighbourAddress).getNextHop().equals(neighbour)) {
+                    table.updateCost(neighbourAddress, neighbour, 16);
                     Logger.log("lost connection to " + neighbourAddress);
                     changes = true;
                 }
@@ -82,7 +80,10 @@ public class TableService {
         return this.table;
     }
 
-    public void lostConnection(String nextHop) {
+    public void lostConnection(String ip, int port) {
+        port = port - decrement;
+        String nextHop = ip + ":" + Integer.toString(port);
+        Logger.log("timeout of nexthop: " + nextHop);
         if(table.isDown(nextHop)) {
             printTable();
         }

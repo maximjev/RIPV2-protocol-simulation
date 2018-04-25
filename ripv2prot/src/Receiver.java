@@ -1,33 +1,37 @@
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketException;
+import java.net.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 public class Receiver implements Runnable {
-    private String neighbourIp;
-    private int neighbourPort;
     private DatagramSocket socket;
-    private long time;
+    private HashMap<InetSocketAddress, Long> times;
 
     private TableService service;
 
-    public Receiver(TableService service,String neighbourIp,int neighbourPort, int myPort) throws SocketException {
+    public Receiver(TableService service, int myPort) throws SocketException {
         this.service = service;
-        this.neighbourIp = neighbourIp;
-        this.neighbourPort = neighbourPort;
+        this.times = new HashMap<>();
         this.socket = new DatagramSocket(myPort);
     }
 
     public void checkTime() throws InterruptedException{
+        Set<Map.Entry<InetSocketAddress,Long>> entrySet = times.entrySet();
         while(true) {
             Thread.sleep(5000);
-            if(System.currentTimeMillis() - time > 6000) {
-                Logger.log("lost connection to: " + neighbourIp + ":" + neighbourPort);
-                service.lostConnection(this.neighbourIp + ":" + neighbourPort);
-            } else {
-                service.establishedConnection(this.neighbourIp + ":" + neighbourPort);
+            for(Iterator iterator = entrySet.iterator(); iterator.hasNext();) {
+                Map.Entry<InetSocketAddress,Long> entry = (Map.Entry<InetSocketAddress,Long>) iterator.next();
+                if(System.currentTimeMillis() -  entry.getValue() > 6000) {
+                    Logger.log("timeout of: "  + entry.getKey().getPort());
+                    service.lostConnection(
+                            entry.getKey().getAddress().getHostAddress(),
+                            entry.getKey().getPort());
+                    times.remove(entry);
+                }
             }
         }
     }
@@ -46,15 +50,19 @@ public class Receiver implements Runnable {
         try {
             while (true) {
                 byte[] buffer = new byte[1024];
-                DatagramPacket packet = new DatagramPacket(buffer,buffer.length);
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 socket.receive(packet);
-                time = System.currentTimeMillis();
+
+                long time = System.currentTimeMillis();
+                times.put(new InetSocketAddress(packet.getAddress().getHostAddress(), packet.getPort()), time);
+
                 buffer = packet.getData();
 
                 ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(buffer));
                 RoutingTable table = (RoutingTable) inputStream.readObject();
                 Logger.log(String.format("Recieving packet from: %s",packet.getAddress().toString()));
-                service.processTable(table,neighbourIp,neighbourPort);
+
+                new Thread(() -> service.processTable(table,packet.getAddress().getHostAddress(),packet.getPort())).start();
             }
         } catch(IOException ex) {
             ex.printStackTrace();
