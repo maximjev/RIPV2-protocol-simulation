@@ -1,11 +1,10 @@
-import javax.xml.crypto.dsig.keyinfo.KeyValue;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Scanner;
 
 
 public class Main {
@@ -68,8 +67,25 @@ public class Main {
             new Thread(new Receiver(service,myPort)).start();
             new Thread(new Publisher(service, myPort, increment, localIp, neighbourPorts)).start();
 
-        } catch (SocketException ex) {
+            while(true) {
+                try {
+                    Logger.print("enter network to deliver and your message");
+                    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+                    String input = br.readLine();
+                    service.saveMessage(processInput(input));
+                } catch (StringIndexOutOfBoundsException | NullPointerException | NumberFormatException ex)  {
+                    Logger.print("Incorrect input format");
+                    continue;
+                }
+            }
+        } catch (IOException ex) {
             ex.printStackTrace();
         }
     }
+    private static Message processInput(String input) {
+        String network = input.substring(0,input.indexOf(" "));
+        String message = input.substring(input.indexOf(" ") + 1);
+        return new Message(network, message);
+    }
+
 }

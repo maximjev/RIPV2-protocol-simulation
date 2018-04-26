@@ -54,17 +54,8 @@ public class RoutingTable implements Serializable {
         }
         return hasEntry;
     }
-    public boolean isUp(String nextHop) {
-        boolean hasEntry = false;
-        for (TableRow row : rows) {
-            synchronized (row) {
-                if(row.getNextHop().equals(nextHop) && row.getCost() == 16) {
-                    row.setCost(15);
-                    rowsMap.get(row.getAddress()).setCost(15);
-                    hasEntry = true;
-                }
-            }
-        }
-        return hasEntry;
+
+    public String getNextHopByNetwork(String network) {
+        return rowsMap.get(network).getNextHop();
     }
 }

@@ -1,6 +1,7 @@
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.Serializable;
 import java.net.*;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -52,17 +53,23 @@ public class Receiver implements Runnable {
                 byte[] buffer = new byte[1024];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 socket.receive(packet);
+                RoutingTable table;
 
                 long time = System.currentTimeMillis();
                 times.put(new InetSocketAddress(packet.getAddress().getHostAddress(), packet.getPort()), time);
 
                 buffer = packet.getData();
+                Serializable obj = deserialize(buffer);
 
-                ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(buffer));
-                RoutingTable table = (RoutingTable) inputStream.readObject();
-                Logger.log(String.format("Recieving packet from: %s",packet.getAddress().toString()));
-
-                new Thread(() -> service.processTable(table,packet.getAddress().getHostAddress(),packet.getPort())).start();
+                if(obj instanceof RoutingTable) {
+                    table = (RoutingTable) obj;
+                    Logger.log(String.format("Recieving packet from: %s",packet.getAddress().toString()));
+                    new Thread(() -> service.processTable(table,packet.getAddress().getHostAddress(),packet.getPort())).start();
+                } else {
+                    Message message = (Message) obj;
+                    service.saveMessage(message);
+                    continue;
+                }
             }
         } catch(IOException ex) {
             ex.printStackTrace();
@@ -71,5 +78,10 @@ public class Receiver implements Runnable {
         }
     }
 
+    private Serializable deserialize(byte[] buffer) throws IOException, ClassNotFoundException {
+        ObjectInputStream inputStream = new ObjectInputStream(new ByteArrayInputStream(buffer));
+        Serializable obj = (Serializable) inputStream.readObject();
+        return obj;
+    }
 
 }

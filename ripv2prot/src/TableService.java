@@ -5,6 +5,7 @@ public class TableService {
     private RoutingTable table;
     private String myIp;
     private int decrement;
+    private Message message;
 
     public TableService(RoutingTable table, String myIp, int portDecrement) {
         this.table = table;
@@ -89,19 +90,24 @@ public class TableService {
         }
     }
 
-    public void establishedConnection(String nextHop) {
-        //if(table.isUp(nextHop)) {
-          //  printTable();
-        //}
+    public Message fetchMessage() {
+        Message message = this.message;
+        this.message = null;
+        return message;
+    }
+    public void saveMessage(Message message) {
+        this.message = message;
     }
 
-    public void clearTable() {
-        for (TableRow row : table.get_rows()) {
-            synchronized (row) {
-                if (row.getCost() == 16) {
-                    table.removeRow(row);
-                }
-            }
-        }
+    public void printMessage(Message message) {
+        Logger.print("===============================================");
+        Logger.print("Delivered to network: " + message.getNetwork());
+        Logger.print(message.getMessage());
+        Logger.print("===============================================");
+    }
+    public void indicateMessageForwarding(String network) {
+        Logger.print("===============================================");
+        Logger.print("Message is being delivered to network: " + network);
+        Logger.print("===============================================");
     }
 }
