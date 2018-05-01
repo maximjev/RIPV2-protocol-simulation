@@ -61,7 +61,8 @@ public class Main {
 
         String localIp = "127.0.0.1";
         int increment = 1000;
-        TableService service = new TableService(table, myIp,increment);
+        String myExternalIp = localIp + ":" + Integer.toString(myPort);
+        TableService service = new TableService(table, myExternalIp, increment);
 
         try {
             new Thread(new Receiver(service,myPort)).start();

@@ -29,8 +29,10 @@ public class TableService {
         for (TableRow neighbourRow : neighbourRows) {
             neighbourAddress = neighbourRow.getAddress();
             neighbourCost = neighbourRow.getCost();
+
             Logger.log("neighbourAddress: " + neighbourAddress);
             Logger.log("neighbourCost: " + neighbourCost);
+
             if(!myRowsMap.containsKey(neighbourAddress)) {
                 newRow = new TableRow(
                         neighbourAddress,
@@ -45,6 +47,7 @@ public class TableService {
                     myRowsMap.get(neighbourAddress).getCost() != 0) {
                 if(neighbourCost != 16 &&
                         neighbourCost + 1 != myRowsMap.get(neighbourAddress).getCost() &&
+                        !neighbourRow.getNextHop().equals(myIp) &&
                         neighbourCost < myRowsMap.get(neighbourAddress).getCost()) {
                     table.updateCost(neighbourAddress, neighbour, neighbourCost + 1);
                     changes = true;
